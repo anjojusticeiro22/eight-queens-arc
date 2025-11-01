@@ -23,7 +23,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
 <script>
-const CONTRACT_ADDRESS = "0xf3949fff894A433dCC2BCf6D638110c54C1DbF5E";
+const CONTRACT_ADDRESS = "0xf3949fff894A433dCC2BCf6D638110c54C1DbF5E"; // NFT contract
 const CONTRACT_ABI = [
   "function mintScore(string memory tokenURI) public returns (uint256)"
 ];
@@ -45,7 +45,9 @@ function isAttacked(r, c) {
   return false;
 }
 
-function allQueensPlaced() { return board.every(col => col !== -1); }
+function allQueensPlaced() {
+  return board.every(col => col !== -1);
+}
 
 function renderBoard() {
   boardEl.innerHTML = '';
@@ -76,31 +78,41 @@ function renderBoard() {
     }
   }
 
-  // Mostrar botão Mint NFT só se todas as 8 rainhas estiverem no tabuleiro
+  // Mostrar botão Mint NFT apenas quando todas as rainhas forem colocadas
   mintBtn.style.display = allQueensPlaced() ? 'inline-block' : 'none';
 }
 
 document.getElementById('resetBtn').onclick = () => {
-  board.fill(-1); moves = 0; movesEl.textContent = moves; renderBoard();
+  board.fill(-1);
+  moves = 0;
+  movesEl.textContent = moves;
+  renderBoard();
 };
 
+// Chamada inicial
 renderBoard();
 
+// Mint NFT
 mintBtn.onclick = async () => {
   if (!window.ethereum) { alert("Instale MetaMask"); return; }
-  await window.ethereum.request({ method: 'eth_requestAccounts' });
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  const signer = await provider.getSigner();
-  const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-  const tokenURI = JSON.stringify({ moves: moves, timestamp: Date.now() });
 
   try {
-    statusEl.textContent = '📝 Preparando transação...';
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+    // Criar JSON simples do score
+    const tokenURI = JSON.stringify({
+      moves: moves,
+      timestamp: Date.now()
+    });
+
+    statusEl.textContent = '📝 Preparando transação de mint...';
     const tx = await contract.mintScore(tokenURI, { gasLimit: 100000 });
-    statusEl.textContent = `💳 NFT Mint enviado: ${tx.hash}`;
+    statusEl.textContent = `💳 Transação enviada: ${tx.hash}`;
     await tx.wait();
-    statusEl.textContent = `✅ NFT Mintado no bloco ${tx.blockNumber}`;
+    statusEl.textContent = `✅ NFT Mintado com sucesso no bloco ${tx.blockNumber}`;
   } catch (err) {
     console.error(err);
     statusEl.textContent = `❌ Erro: ${err.message || err}`;
