@@ -78,7 +78,7 @@ function renderBoard() {
     }
   }
 
-  // Mostrar botão Mint NFT apenas quando todas as rainhas forem colocadas
+  // Botão Mint só aparece quando todas as rainhas forem colocadas
   mintBtn.style.display = allQueensPlaced() ? 'inline-block' : 'none';
 }
 
@@ -89,30 +89,36 @@ document.getElementById('resetBtn').onclick = () => {
   renderBoard();
 };
 
-// Chamada inicial
+// Inicializar tabuleiro
 renderBoard();
 
-// Mint NFT
+// Função Mint NFT
 mintBtn.onclick = async () => {
-  if (!window.ethereum) { alert("Instale MetaMask"); return; }
+  if (!window.ethereum) { alert("Instale MetaMask ou Rabby"); return; }
 
   try {
+    // Conectar carteira
     await window.ethereum.request({ method: 'eth_requestAccounts' });
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
+
+    // Instanciar contrato com signer
     const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-    // Criar JSON simples do score
+    // Criar tokenURI simples com score
     const tokenURI = JSON.stringify({
       moves: moves,
       timestamp: Date.now()
     });
 
     statusEl.textContent = '📝 Preparando transação de mint...';
+
+    // Chamada real para mint NFT (free mint)
     const tx = await contract.mintScore(tokenURI, { gasLimit: 100000 });
+
     statusEl.textContent = `💳 Transação enviada: ${tx.hash}`;
-    await tx.wait();
-    statusEl.textContent = `✅ NFT Mintado com sucesso no bloco ${tx.blockNumber}`;
+    const receipt = await tx.wait(); // espera a confirmação
+    statusEl.textContent = `✅ NFT Mintado no bloco ${receipt.blockNumber}`;
   } catch (err) {
     console.error(err);
     statusEl.textContent = `❌ Erro: ${err.message || err}`;
