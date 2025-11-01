@@ -1,49 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Teste Ethers</title>
+<title>8-Queens NFT Game – Arc Testnet</title>
+<style>
+body { font-family: Arial; padding:20px; }
+#board { display:grid; grid-template-columns:repeat(8,48px); gap:4px; margin-top:12px; }
+.cell { width:48px; height:48px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid #333; }
+.queen { font-size:24px; }
+.invalid { background:#ff9999; cursor:not-allowed; }
+button { margin-top:12px; padding:6px 12px; cursor:pointer; }
+#status { margin-top:12px; word-break:break-word; }
+</style>
 </head>
 <body>
-<button id="mintBtn">Mint NFT</button>
+
+<h1>8-Queens NFT Game – Arc Testnet</h1>
+<div>Movimentos: <span id="moves">0</span></div>
+<div id="board"></div>
+<button id="resetBtn">Reset</button>
+<button id="mintBtn" style="display:none;">Mint NFT do Score</button>
 <div id="status"></div>
 
+<!-- Ethers.js UMD -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-    const mintBtn = document.getElementById('mintBtn');
-    const status = document.getElementById('status');
-    const CONTRACT_ADDRESS = "0xfb150a81805eD518582242a4C3bAcFf746C09215";
-    const CONTRACT_ABI = ["function mintScore(string memory tokenURI) public returns (uint256)"];
 
-    mintBtn.onclick = async () => {
-        try {
-            if(!window.ethereum){ alert("Instale MetaMask ou Rabby"); return; }
+const CONTRACT_ADDRESS = "0xB0e867223285a65f93757A572855cD3Ab17ba6Ce"; // seu contrato na Arc Testnet
+const CONTRACT_ABI = ["function mintScore(string memory tokenURI) public returns (uint256)"];
 
-            // Conecta carteira
-            const provider = new ethers.providers.Web3Provider(window.ethereum);
-            await provider.send("eth_requestAccounts", []);
-            const signer = provider.getSigner();
+let board = Array(8).fill(-1);
+let moves = 0;
+const boardEl = document.getElementById('board');
+const movesEl = document.getElementById('moves');
+const statusEl = document.getElementById('status');
+const mintBtn = document.getElementById('mintBtn');
 
-            // Conecta contrato
-            const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+function isAttacked(r, c) {
+    for (let i = 0; i < 8; i++) {
+        if (board[i] === -1) continue;
+        let qr = i, qc = board[i];
+        if (r === qr || c === qc) return true;
+        if (Math.abs(r - qr) === Math.abs(c - qc)) return true;
+    }
+    return false;
+}
 
-            const tokenURI = JSON.stringify({moves: 8, timestamp: Date.now()});
+function allQueensPlaced() { return board.every(col => col !== -1); }
 
-            status.textContent = "📝 Abrindo assinatura...";
+function renderBoard() {
+    boardEl.innerHTML = '';
+    for (let r=0;r<8;r++) for (let c=0;c<8;c++){
+        const div = document.createElement('div');
+        div.className='cell'; div.dataset.r=r; div.dataset.c=c;
+        if(board[r]===c){ const span=document.createElement('span'); span.className='queen'; span.textContent='♕'; div.appendChild(span);}
+        if(isAttacked(r,c)&&board[r]!==c) div.classList.add('invalid');
+        div.onclick=()=>{if(isAttacked(r,c)&&board[r]!==c) return; board[r]===c?board[r]=-1:board[r]=c; moves++; movesEl.textContent=moves; renderBoard();}
+        boardEl.appendChild(div);
+    }
+    mintBtn.style.display = allQueensPlaced()?'inline-block':'none';
+}
 
-            // Mint NFT
-            const tx = await contract.mintScore(tokenURI, { gasLimit: 100000 });
-            status.textContent = `💳 Transação enviada: ${tx.hash}`;
+document.getElementById('resetBtn').onclick = ()=>{ board.fill(-1); moves=0; movesEl.textContent=moves; renderBoard();}
+renderBoard();
 
-            const receipt = await tx.wait();
-            status.textContent = `✅ NFT mintado no bloco ${receipt.blockNumber}`;
-        } catch(err){
-            console.error(err);
-            status.textContent = `❌ Erro: ${err.message||err}`;
+// Mint NFT com arte do tabuleiro
+mintBtn.onclick=async()=>{
+    try{
+        if(!window.ethereum){ alert("Instale MetaMask ou Rabby"); return; }
+
+        const provider = new ethers.providers.Web3Provider(window.ethereum, "any"); // detecta rede Arc
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+        const network = await provider.getNetwork();
+        if(network.chainId !== 5042002){ // Arc Testnet chainId
+            alert("Conecte sua carteira à Arc Testnet!");
+            return;
         }
-    };
+
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+        // Gera arte do tabuleiro
+        let art = '';
+        for(let r=0;r<8;r++){
+            for(let c=0;c<8;c++){
+                art += board[r]===c?'♕':'⬜';
+            }
+            art+='\n';
+        }
+
+        const tokenURI = JSON.stringify({
+            moves: moves,
+            timestamp: Date.now(),
+            board: art
+        });
+
+        statusEl.textContent='📝 Abrindo assinatura para mint...';
+        const tx = await contract.mintScore(tokenURI, {gasLimit:200000});
+        statusEl.textContent=`💳 Transação enviada: ${tx.hash}`;
+
+        const receipt = await tx.wait();
+        statusEl.textContent=`✅ NFT Mintado no bloco ${receipt.blockNumber}`;
+    } catch(err){
+        console.error(err);
+        statusEl.textContent=`❌ Erro: ${err.message||err}`;
+    }
+};
 });
 </script>
+
 </body>
 </html>
