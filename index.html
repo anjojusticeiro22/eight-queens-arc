@@ -1,19 +1,20 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
+<meta charset="UTF-8">
 <title>8-Queens NFT Game</title>
 <style>
-  body { font-family: Arial; padding: 20px; }
-  #board { display:grid; grid-template-columns:repeat(8,48px); gap:4px; margin-top:12px; }
-  .cell { width:48px; height:48px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid #333; }
-  .queen { font-size:24px; }
-  .invalid { background: #ff9999; cursor: not-allowed; }
-  button { margin-top:12px; padding:6px 12px; cursor:pointer; }
-  #status { margin-top:12px; }
+body { font-family: Arial; padding:20px; }
+#board { display:grid; grid-template-columns:repeat(8,48px); gap:4px; margin-top:12px; }
+.cell { width:48px; height:48px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid #333; }
+.queen { font-size:24px; }
+.invalid { background:#ff9999; cursor:not-allowed; }
+button { margin-top:12px; padding:6px 12px; cursor:pointer; }
+#status { margin-top:12px; }
 </style>
 </head>
 <body>
+
 <h1>8-Queens NFT Game</h1>
 <div>Movimentos: <span id="moves">0</span></div>
 <div id="board"></div>
@@ -21,15 +22,17 @@
 <button id="mintBtn" style="display:none;">Mint NFT do Score</button>
 <div id="status"></div>
 
-<!-- Carregar ethers.js primeiro -->
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
+<!-- ethers.js v5 -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 
 <script>
-const CONTRACT_ADDRESS = "0xf3949fff894A433dCC2BCf6D638110c54C1DbF5E"; 
+// === Configurações do contrato ===
+const CONTRACT_ADDRESS = "0xf3949fff894A433dCC2BCf6D638110c54C1DbF5E";
 const CONTRACT_ABI = [
-  "function mintScore(string memory tokenURI) public returns (uint256)"
+    "function mintScore(string memory tokenURI) public returns (uint256)"
 ];
 
+// === Variáveis do tabuleiro ===
 let board = Array(8).fill(-1);
 let moves = 0;
 const boardEl = document.getElementById('board');
@@ -37,95 +40,96 @@ const movesEl = document.getElementById('moves');
 const statusEl = document.getElementById('status');
 const mintBtn = document.getElementById('mintBtn');
 
+// Checa se uma célula está atacada
 function isAttacked(r, c) {
-  for (let i = 0; i < 8; i++) {
-    if (board[i] === -1) continue;
-    let qr = i, qc = board[i];
-    if (r === qr || c === qc) return true;
-    if (Math.abs(r - qr) === Math.abs(c - qc)) return true;
-  }
-  return false;
-}
-
-function allQueensPlaced() {
-  return board.every(col => col !== -1);
-}
-
-function renderBoard() {
-  boardEl.innerHTML = '';
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const div = document.createElement('div');
-      div.className = 'cell';
-      div.dataset.r = r; div.dataset.c = c;
-
-      if (board[r] === c) {
-        const span = document.createElement('span');
-        span.className = 'queen';
-        span.textContent = '♕';
-        div.appendChild(span);
-      }
-
-      if (isAttacked(r, c) && board[r] !== c) div.classList.add('invalid');
-
-      div.onclick = () => {
-        if (isAttacked(r, c) && board[r] !== c) return;
-        board[r] === c ? board[r] = -1 : board[r] = c;
-        moves++;
-        movesEl.textContent = moves;
-        renderBoard();
-      };
-
-      boardEl.appendChild(div);
+    for (let i = 0; i < 8; i++) {
+        if (board[i] === -1) continue;
+        let qr = i, qc = board[i];
+        if (r === qr || c === qc) return true;
+        if (Math.abs(r - qr) === Math.abs(c - qc)) return true;
     }
-  }
-
-  // Bloqueia ou mostra o botão Mint
-  mintBtn.style.display = allQueensPlaced() ? 'inline-block' : 'none';
+    return false;
 }
 
-// Reset tabuleiro
+// Checa se todas as rainhas foram colocadas
+function allQueensPlaced() {
+    return board.every(col => col !== -1);
+}
+
+// Renderiza o tabuleiro
+function renderBoard() {
+    boardEl.innerHTML = '';
+    for (let r=0; r<8; r++) {
+        for (let c=0; c<8; c++) {
+            const div = document.createElement('div');
+            div.className = 'cell';
+            div.dataset.r = r; div.dataset.c = c;
+
+            if (board[r] === c) {
+                const span = document.createElement('span');
+                span.className = 'queen';
+                span.textContent = '♕';
+                div.appendChild(span);
+            }
+
+            if (isAttacked(r, c) && board[r] !== c) div.classList.add('invalid');
+
+            div.onclick = () => {
+                if (isAttacked(r, c) && board[r] !== c) return;
+                board[r] === c ? board[r] = -1 : board[r] = c;
+                moves++;
+                movesEl.textContent = moves;
+                renderBoard();
+            };
+
+            boardEl.appendChild(div);
+        }
+    }
+
+    // Bloqueia ou mostra o botão Mint
+    mintBtn.style.display = allQueensPlaced() ? 'inline-block' : 'none';
+}
+
+// Reset
 document.getElementById('resetBtn').onclick = () => {
-  board.fill(-1);
-  moves = 0;
-  movesEl.textContent = moves;
-  renderBoard();
+    board.fill(-1);
+    moves = 0;
+    movesEl.textContent = moves;
+    renderBoard();
 };
 
-// Inicializar tabuleiro
+// Inicializa tabuleiro
 renderBoard();
 
-// Função Mint NFT
+// Função mint NFT
 mintBtn.onclick = async () => {
-  if (!window.ethereum) { alert("Instale MetaMask ou Rabby"); return; }
+    try {
+        if (!window.ethereum) { alert("Instale MetaMask ou Rabby"); return; }
 
-  try {
-    // Conectar carteira
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const provider = new window.ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+        // Conecta carteira
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
 
-    // Instanciar contrato com signer
-    const contract = new window.ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        // Contrato com signer para forçar assinatura
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-    // Criar tokenURI com score
-    const tokenURI = JSON.stringify({
-      moves: moves,
-      timestamp: Date.now()
-    });
+        // tokenURI com score
+        const tokenURI = JSON.stringify({ moves: moves, timestamp: Date.now() });
 
-    statusEl.textContent = '📝 Preparando transação de mint...';
+        statusEl.textContent = '📝 Abrindo assinatura para mint...';
 
-    // Enviar transação (free mint)
-    const tx = await contract.mintScore(tokenURI, { gasLimit: 100000 });
-    statusEl.textContent = `💳 Transação enviada: ${tx.hash}`;
+        // Chama mintScore COM assinatura
+        const tx = await contract.mintScore(tokenURI, { gasLimit: 100000 });
 
-    const receipt = await tx.wait();
-    statusEl.textContent = `✅ NFT Mintado no bloco ${receipt.blockNumber}`;
-  } catch (err) {
-    console.error(err);
-    statusEl.textContent = `❌ Erro: ${err.message || err}`;
-  }
+        statusEl.textContent = `💳 Transação enviada: ${tx.hash}`;
+
+        const receipt = await tx.wait();
+        statusEl.textContent = `✅ NFT Mintado no bloco ${receipt.blockNumber}`;
+    } catch(err) {
+        console.error(err);
+        statusEl.textContent = `❌ Erro: ${err.message || err}`;
+    }
 };
 </script>
 </body>
