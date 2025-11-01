@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
-<title>8-Queens Arc Testnet</title>
+<title>8-Queens NFT Game</title>
 <style>
   body { font-family: Arial; padding: 20px; }
   #board { display:grid; grid-template-columns:repeat(8,48px); gap:4px; margin-top:12px; }
@@ -14,20 +14,18 @@
 </style>
 </head>
 <body>
-<h1>8-Queens Game</h1>
+<h1>8-Queens NFT Game</h1>
 <div>Movimentos: <span id="moves">0</span></div>
 <div id="board"></div>
 <button id="resetBtn">Reset</button>
-<button id="submitBtn">Enviar Score</button>
+<button id="mintBtn" style="display:none;">Mint NFT do Score</button>
 <div id="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
 <script>
-const CONTRACT_ADDRESS = "0x6b040c8b8a36dc850d2c35fb9779dd15866a88fd"; // substitua pelo seu
+const CONTRACT_ADDRESS = "0xf3949fff894A433dCC2BCf6D638110c54C1DbF5E";
 const CONTRACT_ABI = [
-  "function submitScore(uint256 _moves) public",
-  "function getScoresCount() public view returns(uint256)",
-  "function getScore(uint256 index) public view returns(address,uint256,uint256)"
+  "function mintScore(string memory tokenURI) public returns (uint256)"
 ];
 
 let board = Array(8).fill(-1);
@@ -35,6 +33,7 @@ let moves = 0;
 const boardEl = document.getElementById('board');
 const movesEl = document.getElementById('moves');
 const statusEl = document.getElementById('status');
+const mintBtn = document.getElementById('mintBtn');
 
 function isAttacked(r, c) {
   for (let i = 0; i < 8; i++) {
@@ -45,6 +44,8 @@ function isAttacked(r, c) {
   }
   return false;
 }
+
+function allQueensPlaced() { return board.every(col => col !== -1); }
 
 function renderBoard() {
   boardEl.innerHTML = '';
@@ -74,6 +75,9 @@ function renderBoard() {
       boardEl.appendChild(div);
     }
   }
+
+  // Mostrar botão Mint NFT só se todas as 8 rainhas estiverem no tabuleiro
+  mintBtn.style.display = allQueensPlaced() ? 'inline-block' : 'none';
 }
 
 document.getElementById('resetBtn').onclick = () => {
@@ -82,21 +86,21 @@ document.getElementById('resetBtn').onclick = () => {
 
 renderBoard();
 
-document.getElementById('submitBtn').onclick = async () => {
+mintBtn.onclick = async () => {
   if (!window.ethereum) { alert("Instale MetaMask"); return; }
   await window.ethereum.request({ method: 'eth_requestAccounts' });
   const provider = new ethers.BrowserProvider(window.ethereum);
   const signer = await provider.getSigner();
   const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-  const scoreValue = moves > 0 ? moves : 1;
+  const tokenURI = JSON.stringify({ moves: moves, timestamp: Date.now() });
 
   try {
     statusEl.textContent = '📝 Preparando transação...';
-    const tx = await contract.submitScore(scoreValue, { gasLimit: 100000 });
-    statusEl.textContent = `💳 Transação enviada: ${tx.hash}`;
+    const tx = await contract.mintScore(tokenURI, { gasLimit: 100000 });
+    statusEl.textContent = `💳 NFT Mint enviado: ${tx.hash}`;
     await tx.wait();
-    statusEl.textContent = '✅ Score confirmado na blockchain!';
+    statusEl.textContent = `✅ NFT Mintado no bloco ${tx.blockNumber}`;
   } catch (err) {
     console.error(err);
     statusEl.textContent = `❌ Erro: ${err.message || err}`;
