@@ -8,6 +8,7 @@
   #board { display:grid; grid-template-columns:repeat(8,48px); gap:4px; margin-top:12px; }
   .cell { width:48px; height:48px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid #333; }
   .queen { font-size:24px; }
+  .invalid { background: #ff9999; cursor: not-allowed; }
   button { margin-top:12px; padding:6px 12px; cursor:pointer; }
   #status { margin-top:12px; }
 </style>
@@ -22,7 +23,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
 <script>
-const CONTRACT_ADDRESS = "0x6b040c8b8a36dc850d2c35fb9779dd15866a88fd";
+const CONTRACT_ADDRESS = "0x6b040c8b8a36dc850d2c35fb9779dd15866a88fd"; // substitua pelo seu
 const CONTRACT_ABI = [
   "function submitScore(uint256 _moves) public",
   "function getScoresCount() public view returns(uint256)",
@@ -31,44 +32,76 @@ const CONTRACT_ABI = [
 
 let board = Array(8).fill(-1);
 let moves = 0;
-
 const boardEl = document.getElementById('board');
 const movesEl = document.getElementById('moves');
 const statusEl = document.getElementById('status');
 
+function isAttacked(r, c) {
+  for (let i = 0; i < 8; i++) {
+    if (board[i] === -1) continue;
+    let qr = i, qc = board[i];
+    if (r === qr || c === qc) return true;
+    if (Math.abs(r - qr) === Math.abs(c - qc)) return true;
+  }
+  return false;
+}
+
 function renderBoard() {
-  boardEl.innerHTML='';
-  for(let r=0;r<8;r++){
-    for(let c=0;c<8;c++){
-      const div=document.createElement('div');
-      div.className='cell';
-      div.dataset.r=r; div.dataset.c=c;
-      if(board[r]===c){ const span=document.createElement('span'); span.textContent='♕'; span.className='queen'; div.appendChild(span);}
-      div.onclick=()=>{board[r]===c?board[r]=-1:board[r]=c; moves++; movesEl.textContent=moves; renderBoard();}
+  boardEl.innerHTML = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const div = document.createElement('div');
+      div.className = 'cell';
+      div.dataset.r = r; div.dataset.c = c;
+
+      if (board[r] === c) {
+        const span = document.createElement('span');
+        span.className = 'queen';
+        span.textContent = '♕';
+        div.appendChild(span);
+      }
+
+      if (isAttacked(r, c) && board[r] !== c) div.classList.add('invalid');
+
+      div.onclick = () => {
+        if (isAttacked(r, c) && board[r] !== c) return;
+        board[r] === c ? board[r] = -1 : board[r] = c;
+        moves++;
+        movesEl.textContent = moves;
+        renderBoard();
+      };
+
       boardEl.appendChild(div);
     }
   }
 }
-document.getElementById('resetBtn').onclick=()=>{
-  board.fill(-1); moves=0; movesEl.textContent=moves; renderBoard();
-}
+
+document.getElementById('resetBtn').onclick = () => {
+  board.fill(-1); moves = 0; movesEl.textContent = moves; renderBoard();
+};
+
 renderBoard();
 
-document.getElementById('submitBtn').onclick=async()=>{
-  if(!window.ethereum){alert("Instale MetaMask"); return;}
-  await window.ethereum.request({ method:'eth_requestAccounts' });
-  const provider=new ethers.BrowserProvider(window.ethereum);
-  const signer=await provider.getSigner();
-  const contract=new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-  const scoreValue = moves>0?moves:1;
-  statusEl.textContent='Enviando transação...';
-  try{
-    const tx = await contract.submitScore(scoreValue);
-    statusEl.textContent=`Tx enviada: ${tx.hash}`;
+document.getElementById('submitBtn').onclick = async () => {
+  if (!window.ethereum) { alert("Instale MetaMask"); return; }
+  await window.ethereum.request({ method: 'eth_requestAccounts' });
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+  const scoreValue = moves > 0 ? moves : 1;
+
+  try {
+    statusEl.textContent = '📝 Preparando transação...';
+    const tx = await contract.submitScore(scoreValue, { gasLimit: 100000 });
+    statusEl.textContent = `💳 Transação enviada: ${tx.hash}`;
     await tx.wait();
-    statusEl.textContent='✅ Score confirmado na blockchain!';
-  }catch(e){statusEl.textContent='Erro: '+e.message;}
-}
+    statusEl.textContent = '✅ Score confirmado na blockchain!';
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = `❌ Erro: ${err.message || err}`;
+  }
+};
 </script>
 </body>
 </html>
