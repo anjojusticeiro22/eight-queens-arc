@@ -10,7 +10,7 @@ body { font-family: Arial; padding:20px; }
 .queen { font-size:24px; }
 .invalid { background:#ff9999; cursor:not-allowed; }
 button { margin-top:12px; padding:6px 12px; cursor:pointer; }
-#status { margin-top:12px; }
+#status { margin-top:12px; word-break:break-word; }
 </style>
 </head>
 <body>
@@ -27,7 +27,7 @@ button { margin-top:12px; padding:6px 12px; cursor:pointer; }
 
 <script>
 // === Configurações do contrato ===
-const CONTRACT_ADDRESS = "0xf3949fff894A433dCC2BCf6D638110c54C1DbF5E";
+const CONTRACT_ADDRESS = "0xf8e81D47203A594245E36C48e151709F0C19fBe8"; // Substitua pelo seu contrato
 const CONTRACT_ABI = [
     "function mintScore(string memory tokenURI) public returns (uint256)"
 ];
@@ -104,14 +104,16 @@ renderBoard();
 // Função mint NFT
 mintBtn.onclick = async () => {
     try {
-        if (!window.ethereum) { alert("Instale MetaMask ou Rabby"); return; }
+        if (!window.ethereum) { 
+            alert("Instale MetaMask ou Rabby"); 
+            return; 
+        }
 
-        // Conecta carteira
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         const signer = provider.getSigner();
 
-        // Contrato com signer para forçar assinatura
+        // Contrato COM signer
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
         // tokenURI com score
@@ -119,7 +121,7 @@ mintBtn.onclick = async () => {
 
         statusEl.textContent = '📝 Abrindo assinatura para mint...';
 
-        // Chama mintScore COM assinatura
+        // Chama mintScore COM assinatura real
         const tx = await contract.mintScore(tokenURI, { gasLimit: 100000 });
 
         statusEl.textContent = `💳 Transação enviada: ${tx.hash}`;
