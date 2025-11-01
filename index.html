@@ -22,8 +22,9 @@ button { margin-top:12px; padding:6px 12px; cursor:pointer; }
 <button id="mintBtn" style="display:none;">Mint NFT do Score</button>
 <div id="status"></div>
 
-<!-- Ethers.js via CDN -->
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<!-- Ethers.js correto para browser -->
+<script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -69,15 +70,15 @@ mintBtn.onclick=async()=>{
     try{
         if(!window.ethereum){ alert("Instale MetaMask ou Rabby"); return; }
 
-        // Conectar carteira
+        // Conecta a carteira
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         const signer = provider.getSigner();
 
-        // Conectar contrato
+        // Conecta contrato
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-        // Criar tokenURI simples
+        // Token URI simples
         const tokenURI = JSON.stringify({moves:moves,timestamp:Date.now()});
 
         statusEl.textContent = '📝 Abrindo assinatura para mint...';
