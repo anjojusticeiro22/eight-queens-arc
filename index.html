@@ -21,9 +21,11 @@
 <button id="mintBtn" style="display:none;">Mint NFT do Score</button>
 <div id="status"></div>
 
+<!-- Carregar ethers.js primeiro -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
+
 <script>
-const CONTRACT_ADDRESS = "0xf3949fff894A433dCC2BCf6D638110c54C1DbF5E"; // NFT contract
+const CONTRACT_ADDRESS = "0xf3949fff894A433dCC2BCf6D638110c54C1DbF5E"; 
 const CONTRACT_ABI = [
   "function mintScore(string memory tokenURI) public returns (uint256)"
 ];
@@ -78,10 +80,11 @@ function renderBoard() {
     }
   }
 
-  // Botão Mint só aparece quando todas as rainhas forem colocadas
+  // Bloqueia ou mostra o botão Mint
   mintBtn.style.display = allQueensPlaced() ? 'inline-block' : 'none';
 }
 
+// Reset tabuleiro
 document.getElementById('resetBtn').onclick = () => {
   board.fill(-1);
   moves = 0;
@@ -99,13 +102,13 @@ mintBtn.onclick = async () => {
   try {
     // Conectar carteira
     await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const provider = new window.ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
 
     // Instanciar contrato com signer
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+    const contract = new window.ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-    // Criar tokenURI simples com score
+    // Criar tokenURI com score
     const tokenURI = JSON.stringify({
       moves: moves,
       timestamp: Date.now()
@@ -113,11 +116,11 @@ mintBtn.onclick = async () => {
 
     statusEl.textContent = '📝 Preparando transação de mint...';
 
-    // Chamada real para mint NFT (free mint)
+    // Enviar transação (free mint)
     const tx = await contract.mintScore(tokenURI, { gasLimit: 100000 });
-
     statusEl.textContent = `💳 Transação enviada: ${tx.hash}`;
-    const receipt = await tx.wait(); // espera a confirmação
+
+    const receipt = await tx.wait();
     statusEl.textContent = `✅ NFT Mintado no bloco ${receipt.blockNumber}`;
   } catch (err) {
     console.error(err);
