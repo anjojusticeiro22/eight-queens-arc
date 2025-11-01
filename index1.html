@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             if(!window.ethereum){ alert("Instale MetaMask ou Rabby"); return; }
 
-            // Conecta carteira
+            // Coneccta carteira
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             await provider.send("eth_requestAccounts", []);
             const signer = provider.getSigner();
