@@ -1,1 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>8-Queens Arc Testnet</title>
+<style>
+  body { font-family: Arial; padding: 20px; }
+  #board { display:grid; grid-template-columns:repeat(8,48px); gap:4px; margin-top:12px; }
+  .cell { width:48px; height:48px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid #333; }
+  .queen { font-size:24px; }
+  button { margin-top:12px; padding:6px 12px; cursor:pointer; }
+  #status { margin-top:12px; }
+</style>
+</head>
+<body>
+<h1>8-Queens Game</h1>
+<div>Movimentos: <span id="moves">0</span></div>
+<div id="board"></div>
+<button id="resetBtn">Reset</button>
+<button id="submitBtn">Enviar Score</button>
+<div id="status"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
+<script>
+const CONTRACT_ADDRESS = "0x6b040c8b8a36dc850d2c35fb9779dd15866a88fd";
+const CONTRACT_ABI = [
+  "function submitScore(uint256 _moves) public",
+  "function getScoresCount() public view returns(uint256)",
+  "function getScore(uint256 index) public view returns(address,uint256,uint256)"
+];
+
+let board = Array(8).fill(-1);
+let moves = 0;
+
+const boardEl = document.getElementById('board');
+const movesEl = document.getElementById('moves');
+const statusEl = document.getElementById('status');
+
+function renderBoard() {
+  boardEl.innerHTML='';
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const div=document.createElement('div');
+      div.className='cell';
+      div.dataset.r=r; div.dataset.c=c;
+      if(board[r]===c){ const span=document.createElement('span'); span.textContent='♕'; span.className='queen'; div.appendChild(span);}
+      div.onclick=()=>{board[r]===c?board[r]=-1:board[r]=c; moves++; movesEl.textContent=moves; renderBoard();}
+      boardEl.appendChild(div);
+    }
+  }
+}
+document.getElementById('resetBtn').onclick=()=>{
+  board.fill(-1); moves=0; movesEl.textContent=moves; renderBoard();
+}
+renderBoard();
+
+document.getElementById('submitBtn').onclick=async()=>{
+  if(!window.ethereum){alert("Instale MetaMask"); return;}
+  await window.ethereum.request({ method:'eth_requestAccounts' });
+  const provider=new ethers.BrowserProvider(window.ethereum);
+  const signer=await provider.getSigner();
+  const contract=new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+  const scoreValue = moves>0?moves:1;
+  statusEl.textContent='Enviando transação...';
+  try{
+    const tx = await contract.submitScore(scoreValue);
+    statusEl.textContent=`Tx enviada: ${tx.hash}`;
+    await tx.wait();
+    statusEl.textContent='✅ Score confirmado na blockchain!';
+  }catch(e){statusEl.textContent='Erro: '+e.message;}
+}
+</script>
+</body>
+</html>
