@@ -22,11 +22,12 @@ button { margin-top:12px; padding:6px 12px; cursor:pointer; }
 <button id="mintBtn" style="display:none;">Mint NFT do Score</button>
 <div id="status"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+<!-- Ethers.js via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
-window.addEventListener('load', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
-const CONTRACT_ADDRESS = "0xB0e867223285a65f93757A572855cD3Ab17ba6Ce"; // ALTERAR SE DEPLOYAR NOVO CONTRATO
+const CONTRACT_ADDRESS = "0xB0e867223285a65f93757A572855cD3Ab17ba6Ce";
 const CONTRACT_ABI = ["function mintScore(string memory tokenURI) public returns (uint256)"];
 
 let board = Array(8).fill(-1);
@@ -67,19 +68,33 @@ renderBoard();
 mintBtn.onclick=async()=>{
     try{
         if(!window.ethereum){ alert("Instale MetaMask ou Rabby"); return; }
-        const provider=new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts",[]);
-        const signer=provider.getSigner();
-        const contract=new ethers.Contract(CONTRACT_ADDRESS,CONTRACT_ABI,signer);
-        const tokenURI=JSON.stringify({moves:moves,timestamp:Date.now()});
-        statusEl.textContent='📝 Abrindo assinatura para mint...';
-        const tx=await contract.mintScore(tokenURI,{gasLimit:100000});
-        statusEl.textContent=`💳 Transação enviada: ${tx.hash}`;
-        const receipt=await tx.wait();
-        statusEl.textContent=`✅ NFT Mintado no bloco ${receipt.blockNumber}`;
-    }catch(err){ console.error(err); statusEl.textContent=`❌ Erro: ${err.message||err}`;}
+
+        // Conectar carteira
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+
+        // Conectar contrato
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+        // Criar tokenURI simples
+        const tokenURI = JSON.stringify({moves:moves,timestamp:Date.now()});
+
+        statusEl.textContent = '📝 Abrindo assinatura para mint...';
+
+        // Mint NFT
+        const tx = await contract.mintScore(tokenURI, { gasLimit: 100000 });
+        statusEl.textContent = `💳 Transação enviada: ${tx.hash}`;
+
+        const receipt = await tx.wait();
+        statusEl.textContent = `✅ NFT Mintado no bloco ${receipt.blockNumber}`;
+    } catch(err){
+        console.error(err);
+        statusEl.textContent = `❌ Erro: ${err.message || err}`;
+    }
 };
 });
 </script>
+
 </body>
 </html>
