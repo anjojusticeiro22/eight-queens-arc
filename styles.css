@@ -19,7 +19,11 @@
   font-size: 18px;
 }
 
-#board div.red {
+#board div.invalid {
+  background-color: #fcc;
+}
+
+#board div.queen {
   background-color: #f66;
   color: white;
 }

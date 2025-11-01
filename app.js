@@ -1,15 +1,15 @@
-// === CONFIGURAÇÃO DO CONTRATO ===
+// CONFIGURAÇÃO DO CONTRATO
 const CONTRACT_ADDRESS = "0x729abA65933f5663e0A55EF65A70feC97a8a0af9";
 const CONTRACT_ABI = [ 
   // Cole aqui todo o ABI que você enviou
 ];
 
-// === ESTADO DO TABULEIRO ===
+// ESTADO DO TABULEIRO
 let boardState = Array(8).fill(null); // 8 colunas
 const boardDiv = document.getElementById('board');
 const mintButton = document.getElementById('mintButton');
 
-// === CRIA TABULEIRO ===
+// CRIA TABULEIRO
 for (let row = 0; row < 8; row++) {
   for (let col = 0; col < 8; col++) {
     const cell = document.createElement('div');
@@ -20,26 +20,43 @@ for (let row = 0; row < 8; row++) {
   }
 }
 
-// === FUNÇÃO PARA COLOCAR RAINHA ===
-function placeQueen(row, col, cell) {
-  // Remove rainha anterior na coluna
-  if (boardState[col] !== null) {
-    const prevRow = boardState[col];
-    const prevCell = document.querySelector(`[data-row="${prevRow}"][data-col="${col}"]`);
-    prevCell.classList.remove('red');
-    prevCell.textContent = '';
+// CHECA SE UMA CELULA É ATACADA
+function isAttacked(r, c) {
+  for (let col = 0; col < 8; col++) {
+    const row = boardState[col];
+    if (row === null) continue;
+    if (row === r || col === c || Math.abs(row - r) === Math.abs(col - c)) return true;
   }
+  return false;
+}
 
-  // Atualiza estado e visual
+// ATUALIZA VISUAL DO TABULEIRO
+function updateBoard() {
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+      cell.classList.remove('queen','invalid');
+      if (boardState[col] === row) {
+        cell.classList.add('queen');
+        cell.textContent = '♛';
+      } else if (isAttacked(row, col)) {
+        cell.classList.add('invalid');
+        cell.textContent = '';
+      } else {
+        cell.textContent = '';
+      }
+    }
+  }
+}
+
+// COLOCAR RAINHA
+function placeQueen(row, col, cell) {
   boardState[col] = row;
-  cell.classList.add('red');
-  cell.textContent = '♛';
-
-  // Habilita botão só se 8 rainhas estiverem
+  updateBoard();
   mintButton.disabled = boardState.some(r => r === null);
 }
 
-// === FUNÇÃO DE MINT ===
+// MINT NFT
 mintButton.addEventListener('click', async () => {
   if (!window.ethereum) return alert('Instale MetaMask ou Rabby!');
 
@@ -49,11 +66,9 @@ mintButton.addEventListener('click', async () => {
     const signer = await provider.getSigner();
     const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-    // Score do jogador
     const score = boardState.join(',');
     const tokenURI = JSON.stringify({ score, timestamp: Date.now() });
 
-    // Mint NFT pagando apenas gas
     const tx = await contract.mintScore(tokenURI, { gasLimit: 200000 });
     await tx.wait();
 
